@@ -1,0 +1,42 @@
+[package]
+name = "pdx"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# WebAssembly binding
+wasm-bindgen = "0.2"
+
+# Compression
+flate2 = "1.0"
+
+# Cryptography
+aes = "0.8"
+block-modes = "0.9"
+block-padding = "0.2"
+hex = "0.4"
+hex-literal = "0.3"
+
+# Utility crates
+thiserror = "1.0"
+indexmap = "2.2"
+bitflags = "2.4"
+
+# Optional JSON support if needed for debugging
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[build-dependencies]
+# Optional if custom build.rs is used
