@@ -1,0 +1,95 @@
+# PDF Forensic Clone Tool Configuration
+# Runtime configuration for extraction and injection behavior
+
+[extraction]
+extract_hidden_content = true
+strict_mode = true
+extract_steganography = true
+include_xmp = true
+detect_watermarks = true
+detect_third_party = true
+extract_object_streams = true
+analyze_incremental_updates = true
+extract_linearization = true
+security_analysis = true
+extract_embedded_files = true
+analyze_javascript = true
+validate_structure = true
+deep_content_analysis = false
+forensic_analysis = true
+memory_limit = 536870912  # 512MB
+timeout = 300
+
+[injection]
+anti_forensic_mode = true
+reject_third_party_watermarks = true
+preserve_id_hash = true
+use_original_timestamps = true
+lock_permissions = true
+strip_watermarks = true
+preserve_content = true
+force_injection = false
+create_backup = true
+validate_after_injection = true
+compression_level = 6
+
+[validation]
+risk_threshold = "medium"
+verify_trailer_id = true
+compare_hashes = true
+require_exact_match = true
+strict_mode = false
+check_signatures = true
+verify_checksums = true
+validate_structure = true
+check_compliance = false
+report_warnings = true
+fail_on_warnings = false
+
+[logging]
+level = "info"
+file_logging = true
+console_logging = true
+log_file_path = "pdf-forensic.log"
+max_log_size = 10485760  # 10MB
+log_rotation = true
+detailed_errors = true
+
+[performance]
+max_memory_usage = 536870912  # 512MB
+max_processing_time = 300
+parallel_processing = true
+max_threads = 4
+cache_enabled = true
+cache_size = 104857600  # 100MB
+
+[security]
+allow_large_files = true
+max_file_size = 1073741824  # 1GB
+virus_scanning = false
+quarantine_suspicious = false
+backup_originals = true
+secure_deletion = false
+
+[output]
+compression_level = 6
+preserve_metadata = true
+include_timestamps = true
+json_pretty_print = true
+create_backups = true
+overwrite_existing = false
+
+[tool_integration]
+external_validation = true
+pdfid_path = "/usr/local/bin/pdfid.py"
+pdf_parser_path = "/usr/local/bin/pdf-parser.py"
+qpdf_path = "/usr/bin/qpdf"
+verapdf_path = "/usr/local/bin/verapdf"
+timeout_external = 30
+
+[features]
+# Enable specific features at runtime
+compression = true
+image_processing = false
+parallel = true
+pdf_parsing = false
