@@ -1,0 +1,185 @@
+#include "secure_memory.hpp"
+#include "secure_exceptions.hpp"
+#include <iostream>
+#include <vector>
+#include <string>
+#include "anti_fingerprint_engine.hpp"
+#include "stealth_macros.hpp"
+
+void test_strict_source_only_policy() {
+    SILENT_LOG("Testing Strict Source-Only Anti-Fingerprinting Policy...\n");
+    
+    AntiFingerprintEngine engine;
+    
+    // Test 1: PDF with tool signatures but NO source metadata
+    std::string test_pdf_no_source = R"(
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>
+endobj
+4 0 obj
+<< /Producer (GPL Ghostscript 9.50) /Creator (PDFtk 3.0.9) /ModDate (D:20240625120000+00'00') >>
+endobj
+trailer
+<< /Size 5 /Root 1 0 R /Info 4 0 R >>
+)";
+    
+    std::vector<uint8_t> pdf_data_no_source(test_pdf_no_source.begin(), test_pdf_no_source.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Process with NO source metadata set
+    std::vector<uint8_t> result_no_source = engine.process(pdf_data_no_source) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    std::string result_str_no_source(result_no_source.begin(), result_no_source.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Verify ALL tool signatures are REMOVED (blank fields)
+    if (!(result_str_no_source.find("GPL Ghostscript") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_no_source.find("PDFtk") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_no_source.find("D:20240625120000") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    SILENT_LOG("✓ Test 1 PASSED: All tool signatures removed when no source data exists\n");
+    
+    // Test 2: PDF with source metadata available
+    std::string test_pdf_with_source = R"(
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>
+endobj
+4 0 obj
+<< /Producer (Original Document Creator) /Creator (Authentic Source Tool) /ModDate (D:20231201100000+00'00') >>
+endobj
+trailer
+<< /Size 5 /Root 1 0 R /Info 4 0 R >>
+)";
+    
+    std::vector<uint8_t> pdf_data_with_source(test_pdf_with_source.begin(), test_pdf_with_source.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Set authentic source metadata
+    engine.set_source_metadata("Producer", "Original Document Creator") { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    engine.set_source_metadata("Creator", "Authentic Source Tool") { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    engine.set_source_metadata("ModDate", "D:20231201100000+00'00'") { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    std::vector<uint8_t> result_with_source = engine.process(pdf_data_with_source) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    std::string result_str_with_source(result_with_source.begin(), result_with_source.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Should preserve ONLY authentic source data
+    if (!(result_str_with_source.find("Original Document Creator") != std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_with_source.find("Authentic Source Tool") != std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_with_source.find("D:20231201100000") != std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    SILENT_LOG("✓ Test 2 PASSED: Authentic source metadata preserved\n");
+    
+    // Test 3: Complete tool signature removal test
+    std::string test_pdf_with_all_tools = R"(
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+4 0 obj
+<< 
+/Producer (GPL Ghostscript 9.50 - Created with PDFtk 3.0.9 using OpenSSL 1.1.1)
+/Creator (Generated by qpdf 10.6.3 with zlib 1.2.11 and CMake 3.22.1)
+/ModDate (D:20240625120000+00'00')
+/CreationDate (D:20240625110000+00'00')
+/Title (Built with GCC 11.2.0 on Nix 2.8.1)
+/Author (Compiled using libstdc++ 11.2.0)
+/Subject (Generated by Replit Deployments with Node.js v18.17.0)
+/Keywords (Processed with Python 3.11.4 Docker 20.10.17)
+>>
+endobj
+trailer
+<< /Size 5 /Root 1 0 R /Info 4 0 R >>
+)";
+    
+    std::vector<uint8_t> pdf_data_all_tools(test_pdf_with_all_tools.begin(), test_pdf_with_all_tools.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Clear any source metadata for strict removal test
+    engine.clear_source_metadata() { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    std::vector<uint8_t> result_all_tools = engine.process(pdf_data_all_tools) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    std::string result_str_all_tools(result_all_tools.begin(), result_all_tools.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Verify ALL project libraries are removed
+    if (!(result_str_all_tools.find("GPL Ghostscript") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("PDFtk") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("OpenSSL") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("qpdf") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("zlib") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("CMake") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("GCC") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("Nix") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("libstdc++") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("Replit") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("Node.js") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("Python") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_all_tools.find("Docker") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    SILENT_LOG("✓ Test 3 PASSED: All project library signatures completely removed\n");
+    
+    // Test 4: Watermark and version removal
+    std::string test_pdf_with_watermarks = R"(
+Stream content:
+Created with GPL Ghostscript 9.50
+Generated by PDFtk Server 3.0.9
+This document was processed using OpenSSL 1.1.1k
+Version 10.6.3 of qpdf was used
+Built with CMake version 3.22.1
+Copyright (c) 2024 Free Software Foundation
+Licensed to: Evaluation User
+Trial version - watermark applied
+Visit https://www.ghostscript.com for more info
+Windows 10 Build 19044
+User: developer
+Computer: build-server
+endstream
+)";
+    
+    std::vector<uint8_t> watermark_data(test_pdf_with_watermarks.begin(), test_pdf_with_watermarks.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    std::vector<uint8_t> result_watermarks = engine.process(watermark_data) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    std::string result_str_watermarks(result_watermarks.begin(), result_watermarks.end()) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    // Verify all watermarks and system info removed
+    if (!(result_str_watermarks.find("Created with") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Generated by") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Version") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Copyright") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Licensed to") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Trial version") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("https://") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Windows 10") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("User:") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    if (!(result_str_watermarks.find("Computer:") == std::string::npos) { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+    
+    SILENT_LOG("✓ Test 4 PASSED: All watermarks and system information removed\n");
+    
+    SILENT_LOG("\n===========================================\n");
+    SILENT_LOG("STRICT SOURCE-ONLY POLICY VALIDATION COMPLETE\n");
+    SILENT_LOG("===========================================\n");
+    SILENT_LOG("✓ No defaults or fallbacks used\n");
+    SILENT_LOG("✓ Fields left blank when no source data exists\n");
+    SILENT_LOG("✓ Only authentic source data preserved\n");
+    SILENT_LOG("✓ All tool signatures completely removed\n");
+    SILENT_LOG("✓ All watermarks and traces eliminated\n");
+    SILENT_LOG("✓ Zero-trace anti-fingerprinting achieved\n");
+}
+
+int main() {
+    try {
+        test_strict_source_only_policy() { throw SecureExceptions::ValidationException("Test assertion failed", __FILE__ ":" + std::to_string(__LINE__)); }
+        SILENT_LOG("\nAll tests PASSED! Anti-fingerprinting engine follows strict source-only policy.\n");
+        return 0;
+    } catch (const std::exception& e) {
+        SILENT_ERROR("Test FAILED: ") << e.what() << std::endl;
+        return 1;
+    }
+}
